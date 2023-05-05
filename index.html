@@ -1,0 +1,169 @@
+<html lang="en">
+
+    <head>
+        <meta charset="utf-8">
+        <title>Giftcard</title>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+        <script src="https://hpc.freedompay.com/api/v1.5/cdn/hpc_min.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/8.6.2/firebase-app.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/8.6.2/firebase-firestore.js"></script>
+        <script>
+
+            var docId;
+            var collectionName;
+            var FREEDOMPAY_ORIGIN;
+
+            var getUrlParameter = function getUrlParameter(sParam) {
+                var sPageURL = window.location.search.substring(1),
+                    sURLVariables = sPageURL.split('&'),
+                    sParameterName,
+                    i;
+
+                for (i = 0; i < sURLVariables.length; i++) {
+                    sParameterName = sURLVariables[i].split('=');
+
+                    if (sParameterName[0] === sParam) {
+                        return sParameterName[1] === undefined ? true : decodeURIComponent(sParameterName[1]);
+                    }
+                }
+                return false;
+            };
+
+            function handleErrors(data) {
+                data.errors.forEach(function(error) {
+                    if (error.message === "Unable to generate payment key: Reached maximum attempts.") {
+                        console.log('reload');
+                        firebase.firestore().collection(collectionName).doc(docId).update({ reloadFrame: 'True' });
+                    }
+                    else {
+                        alert("There was an error using google pay for this payment");
+                        console.log(error.message);
+                    }
+                    return;
+                });
+            }
+
+            function setFrameHeight(data) {
+                $('#freedompay-checkout-googlepayiframe iframe').height(data.height);
+            }
+
+            function submitPayment(data) {
+                firebase.firestore().collection(collectionName).doc(docId).update({ paymentKeyData: 
+encodeURIComponent(JSON.stringify(data)) });
+                setTimeout(function() {
+                    window.close();
+                }, 2000);
+            }
+
+            function freedompayMessageHandler(e) {
+
+                var message = e.data;
+                var data = message.data;
+
+                switch (message.type) {
+                    case 1:
+                        handleErrors(data);
+                        break;
+                    case 2:
+                        setFrameHeight(data);
+                        break;
+                    case 3:
+                        submitPayment(data);
+                        break;
+                }
+            }
+
+            $(document).ready(function() {
+                var myframe = getUrlParameter('myframe');
+                var firebaseConfig = JSON.parse(getUrlParameter('firebaseConfig'));
+                docId = getUrlParameter('docId');
+                collectionName = getUrlParameter('collectionName');
+                FREEDOMPAY_ORIGIN = getUrlParameter('apiLink');
+                var totalValue = getUrlParameter('totalValue');
+                var currencySymbol = getUrlParameter('currencySymbol');
+                var translatedText = getUrlParameter('translatedText');
+
+                window.addEventListener("message", freedompayMessageHandler);
+                $('#freedompay-checkout-googlepayiframe').empty().append(myframe);
+                $('#amount-to-pay-text').empty().append(translatedText);
+                $('#amount-to-pay-value').empty().append(currencySymbol + '' + totalValue);
+                firebase.initializeApp(firebaseConfig);
+                firebase.firestore().settings({ experimentalForceLongPolling: true });
+                firebase.firestore().enablePersistence().catch((err) => console.error(`Something failed for 
+enablePersistence, code: ${err.code}`));
+            });
+        </script>
+
+        <style>
+            body {
+                margin: 0
+            }
+            .payment-page-container {
+                position: relative;
+                height: 100%;
+                font-family: "Source Sans Pro", "Helvetica Neue", Helvetica, Arial, sans-serif;
+                color: #58666e;
+                text-align: center;
+                background-color: #f0f3f4;
+                font-size: 1.6rem;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: space-between;
+            }
+            .iframe-container {
+                margin: 48px 0;
+            }
+
+            .pay-instructions {
+                padding: 32px 16px;
+            }
+
+            .logo-footer {
+                width: 80px;
+                margin-bottom: 32px;
+            }
+
+            .logo-footer img {
+                width: 100%;
+            }
+
+            .pay-text {
+                font-size: 3.2rem;
+            }
+
+            .pay-value {
+                font-size: 3.2rem;
+                padding-left: 16px;
+            }
+        </style>
+
+        <base href="/" />
+
+        <meta name="viewport"
+              content="viewport-fit=cover, width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, 
+user-scalable=no">
+        <meta name="format-detection" content="telephone=no">
+        <meta name="msapplication-tap-highlight" content="no">
+    </head>
+    <body>
+    <div class="payment-page-container">
+        <div class="pay-instructions">
+            <p>Tap the Google Pay button.</p>
+            <p>Follow the on-screen instructions for safe and secure payments.</p>
+        </div>
+        <div class="iframe-container">
+            <div style="height: 60px;">
+                <span id="amount-to-pay-text" class="pay-text">Amount to Pay</span>
+                <span id="amount-to-pay-value" class="pay-value">$7.76</span>
+            </div>
+            <div align="center" style="height: 60px;" id="freedompay-checkout-googlepayiframe">#pay-button</div>
+        </div>
+        <div class="logo-footer">
+            <img src="https://images.dynamify.com/logos/dynamify-logo-powered.png" alt="powered by dynamify">
+        </div>
+    </div>
+    </body>
+
+</html>
+
