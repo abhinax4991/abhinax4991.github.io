@@ -46,7 +46,7 @@
 </head>
 <body>
   <div class="loader hidden" id="loader"></div>
-  <div class="message" id="message">Checking payment status...</div>
+  <div class="message" id="message">Checking status...</div>
 
   <script>
     const loader = document.getElementById('loader');
@@ -62,22 +62,24 @@
     if (!requestId) {
       message.textContent = "Missing requestId in URL.";
     } else {
-      const endpoint = `https://c8bd30dcb64f.ngrok.app/Dynamify/worldlineswiss/getPaymentStatus?requestId=${encodeURIComponent(requestId)}`;
+      setTimeout(() => {
+        const endpoint = `https://c8bd30dcb64f.ngrok.app/Dynamify/worldlineswiss/getPaymentStatus?requestId=${encodeURIComponent(requestId)}`;
 
-      fetch(endpoint)
-        .then(response => response.json())
-        .then(data => {
-          if (data.success === true) {
-            loader.classList.remove("hidden");
-            message.textContent = "Please wait while we validate your card…";
-          } else {
-            message.textContent = "Thank you! No action was taken.";
-          }
-        })
-        .catch(error => {
-          console.error("Error fetching status:", error);
-          message.textContent = "Something went wrong. Please try again later.";
-        });
+        fetch(endpoint)
+          .then(response => response.json())
+          .then(data => {
+            if (data.success === true) {
+              loader.classList.remove("hidden");
+              message.textContent = "Please wait while we validate...";
+            } else {
+              message.textContent = "Thank you! No action was taken.";
+            }
+          })
+          .catch(error => {
+            console.error("Error fetching status:", error);
+            message.textContent = "Something went wrong. Please try again later.";
+          });
+      }, 2000); // 2000ms = 2 seconds
     }
   </script>
 </body>
